@@ -91,9 +91,9 @@ int input_validation(int number, int mode, int pattern) {
     printf("Invalid option! Either process or thread");
     return 0;
   }
-  if (pattern < 1 || pattern > 3) {
+  if (pattern < 1 || pattern > 2) {
     printf("ERROR: INPUT VALIDATION \n");
-    printf("Invalid pattern! Has to be between 1 to 3");
+    printf("Invalid pattern! Has to be between 1 to 2");
     return 0;
   }
   return 1;
