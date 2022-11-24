@@ -8,7 +8,7 @@ typedef struct {
   int numberofchildren;
 } ThreadParams;
 
-int input_validation(int number, char option[100], int pattern);
+int input_validation(int number, int mode, int pattern);
 void thread_mode();
 void process_mode();
 void process_pattern_1_child(int id);
@@ -25,63 +25,47 @@ void print_menu();
 int MODE = 0; // process : 1, thread: 2
 int number_of_things = 0;
 int pattern = 0;
-char thread_or_process[100];
 int debug_on = 0; // 0: off, 1: on
 
 int main(int argc, char *argv[]) {
   int next_idx = 1;
+  int position = 1;
   // Process command line args
   while (next_idx < argc) {
-    if (argc < 4) {
-      printf("ERROR: NOT ENOUGH ARGUMENTS \n \nexpect to have 4, but "
-             "received %d",
-             argc - 1);
+    if (!strcmp(argv[next_idx], "-h") || !strcmp(argv[next_idx], "--help")) {
+      ++next_idx;
       print_menu();
       exit(1);
-    } else if (!strcmp(argv[next_idx], "-h") ||
-               !strcmp(argv[next_idx], "--help")) {
-      ++next_idx;
+    } else if (argc < 4) {
+      printf("ERROR: NOT ENOUGH ARGUMENTS \n \nexpect to have 4, but "
+             "received %d \n \n",
+             argc - 1);
       print_menu();
       exit(1);
     } else if (!strcmp(argv[next_idx], "-d")) {
       ++next_idx;
       debug_on = 1;
-    } else if (!strcmp(argv[next_idx], "-mt")) {
+      position += 1;
+    } else if (!strcmp(argv[next_idx], "process")) {
       ++next_idx;
-      max_threads = atoi(argv[next_idx]);
+      MODE = 1;
       ++next_idx;
-    } else if (!strcmp(argv[next_idx], "-mir")) {
+    } else if (!strcmp(argv[next_idx], "thread")) {
       ++next_idx;
-      min_rand = atoi(argv[next_idx]);
-      ++next_idx;
-    } else if (!strcmp(argv[next_idx], "-mar")) {
-      ++next_idx;
-      max_rand = atoi(argv[next_idx]);
-      ++next_idx;
-    } else if (!strcmp(argv[next_idx], "-niq")) {
-      ++next_idx;
-      num_in_queue = atoi(argv[next_idx]);
-      ++next_idx;
-    } else if (!strcmp(argv[next_idx], "-ms")) {
-      ++next_idx;
-      max_steps = atoi(argv[next_idx]);
-      ++next_idx;
-    } else if (!strcmp(argv[next_idx], "-pd")) {
-      ++next_idx;
-      process_dur = atoi(argv[next_idx]);
+      MODE = 2;
       ++next_idx;
     } else {
-      // unknown arg
-      printf("invalid command %s\n", argv[next_idx]);
-      help_menu();
-      return 0;
+      ++next_idx;
     }
   }
-
-  number_of_things = atoi(next_idx);
-  pattern = atoi(argv[3]);
-  strcpy(thread_or_process, argv[2]);
-  if (!input_validation(number_of_things, thread_or_process, pattern)) {
+  number_of_things = atoi(argv[position]);
+  pattern = atoi(argv[position + 2]);
+  if (debug_on) {
+    printf("number of things %d \n \n", number_of_things);
+    printf("Pattern: %d \n \n", pattern);
+    printf("Mode: %d \n \n", MODE);
+  }
+  if (!input_validation(number_of_things, MODE, pattern)) {
     exit(1);
   }
   switch (MODE) {
@@ -93,26 +77,21 @@ int main(int argc, char *argv[]) {
   }
 }
 
-int input_validation(int number, char option[100], int pattern) {
+int input_validation(int number, int mode, int pattern) {
 
   if (number < 1 || number > 256) {
     printf("ERROR: INPUT VALIDATION \n");
     printf("Number of things has to be between 1 and 256");
     return 0;
   }
-  if (strcmp(option, "process") == 0) {
-    MODE = 1;
-  } else if (strcmp(option, "thread") == 0) {
-    MODE = 2;
-  }
-  if (MODE == 0) {
+  if (mode == 0) {
     printf("ERROR: INPUT VALIDATION \n");
     printf("Invalid option! Either process or thread");
     return 0;
   }
-  if (pattern < 1 || pattern > 3) {
+  if (pattern < 1 || pattern > 2) {
     printf("ERROR: INPUT VALIDATION \n");
-    printf("Invalid pattern! Has to be between 1 to 3");
+    printf("Invalid pattern! Has to be between 1 to 2");
     return 0;
   }
   return 1;
@@ -157,7 +136,14 @@ void *thread_func2(ThreadParams *params) {
     childparams->mythreadindex = params->mythreadindex + 1;
     childparams->numberofchildren = params->numberofchildren - 1;
     pthread_t tid;
-    pthread_create(&tid, NULL, thread_func2, childparams);
+    int create_status = pthread_create(&tid, NULL, thread_func2, childparams);
+    if (create_status != 0) {
+      printf("Error creating thread %d \n \n", childparams->mythreadindex);
+    } else {
+      if (debug_on) {
+        printf("Thread %d is created \n \n", childparams->mythreadindex);
+      }
+    }
     pthread_join(tid, NULL);
     free(childparams);
   }
@@ -170,11 +156,26 @@ void thread_pattern_1() {
   int *thread_ids = malloc(sizeof(int) * number_of_things);
   for (int i = 0; i < number_of_things; i++) {
     thread_ids[i] = i;
-    pthread_create(&child_tid[i], NULL, thread_func, thread_ids[i]);
+    int create_status =
+        pthread_create(&child_tid[i], NULL, thread_func, thread_ids[i]);
+    if (create_status != 0) {
+      printf("Error creating thread %d \n \n", i);
+    } else {
+      if (debug_on) {
+        printf("Thread %d is created \n \n", i);
+      }
+    }
   }
 
   for (int i = 0; i < number_of_things; i++) {
-    pthread_join(child_tid[i], NULL);
+    int join_status = pthread_join(child_tid[i], NULL);
+    if (join_status != 0) {
+      printf("Error joining thread %d \n \n", i);
+    } else {
+      if (debug_on) {
+        printf("Thread %d is joined \n \n", i);
+      }
+    }
     printf("Thread %d exitting \n", i + 1);
   }
 }
@@ -184,9 +185,14 @@ void thread_pattern_2() {
   childparams->mythreadindex = 1;
   childparams->numberofchildren = number_of_things - 1;
   pthread_t tid;
-  pthread_create(&tid, NULL, thread_func2, childparams);
+  int main_thread = pthread_create(&tid, NULL, thread_func2, childparams);
+  if (main_thread != 0) {
+    printf("Error creating main thread\n \n");
+  } else {
+    printf("Created main thread with tid: %lu \n \n", tid);
+  }
   pthread_join(tid, NULL);
-  printf("Joined %d \n", tid);
+  printf("Joined main thread with tid: %lu \n", tid);
 }
 
 void process_pattern_1_child(int id) {
