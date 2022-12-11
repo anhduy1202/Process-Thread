@@ -1,0 +1,38 @@
+MAIN
+  Process command line args
+  Input validation
+  Parse input to decide which mode and pattern did user choose (THREAD MODE vs PROCESS MODE)
+
+
+PROCESS MODE
+  PROCESS PATTERN 1 (1 parent with multiple children process)
+    1st Loop until reach number that user input
+        Create child process (fork())
+    2nd Loop until reach number that user input
+        Wait for all children process to finish
+    End.
+
+  PROCESS PATTERN 2 (Main process create children then children create their own children and so on)
+    Create a parent process
+    Call a function and pass the current process to check if there're any children left
+    If there're stil children left
+        Repeat the calling process and keep creating children of children until there're no children left
+    If there're no children left
+        Children terminates in a bottom up order
+    Back to our original process and wait for it to exit
+    End.
+
+THREAD MODE
+  THREAD PATTERN 1 
+    Similar to PROCESS PATTERN 1 but use pthread_create() instead of fork(), and pthread_join() instead of wait(NULL)
+  THREAD PATERN 2
+   Create our main thread (pthread_create)
+    Check if our main thread have any children left
+      If there're still children
+        Create children thread from current thread
+      If there're no children left
+        Join the thread one by one
+    Back to our main thread and join our main thread
+    End.
+
+
